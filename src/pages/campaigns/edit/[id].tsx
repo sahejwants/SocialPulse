@@ -53,7 +53,7 @@ const EditCampaignPage: NextPageWithLayout<EditCampaignPageProps> = ({ campaign 
           endDate: campaign.endDate ? new Date(campaign.endDate).toISOString().slice(0, 16) : "",
           location: campaign.location ?? "",
           mapUrl: campaign.mapUrl ?? "",
-          maxParticipants: campaign.maxParticipants ?? "",
+          maxParticipants: campaign.maxParticipants ?? undefined,
         }}
       />
     </div>

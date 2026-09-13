@@ -21,7 +21,7 @@ const contactSchema = z.object({
 const schema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters").max(100),
   category: z.enum(BUSINESS_CATEGORIES as unknown as [string, ...string[]], {
-    errorMap: () => ({ message: "Please select a category" }),
+    error: () => ({ message: "Please select a category" }),
   }),
   description: z.string().min(30, "Description must be at least 30 characters").max(2000),
   address: z.string().min(5, "Street address required"),

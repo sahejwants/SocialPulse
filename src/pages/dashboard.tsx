@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 import Link from "next/link";
 import Image from "next/image";
 import {
-  Megaphone, Building2, Users, ChevronRight,
+  Megaphone, Building2, Users, ChevronRight, Plus,
   Clock, CheckCircle2, XCircle, Settings, ArrowUpCircle,
 } from "lucide-react";
 

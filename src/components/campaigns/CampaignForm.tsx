@@ -1,4 +1,4 @@
-import { useForm, Controller } from "react-hook-form";
+import { useForm, Controller, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useState, useRef, useMemo } from "react";
@@ -13,7 +13,7 @@ import { AlertCircle, CheckCircle2, MapPin, Calendar, Users, Lock } from "lucide
 const schema = z.object({
   title: z.string().min(10, "Title must be at least 10 characters").max(100, "Max 100 characters"),
   category: z.enum(CAMPAIGN_CATEGORIES as unknown as [string, ...string[]], {
-    errorMap: () => ({ message: "Please select a category" }),
+    error: () => ({ message: "Please select a category" }),
   }),
   description: z
     .string()
@@ -28,10 +28,13 @@ const schema = z.object({
   endDate: z.string().optional(),
   location: z.string().max(300, "Max 300 characters").optional(),
   mapUrl: z.string().url("Enter a valid URL (include https://)").optional().or(z.literal("")),
-  maxParticipants: z.coerce.number().int().min(1, "Must be at least 1").optional().or(z.literal("")),
+  maxParticipants: z.preprocess(
+    (v) => (v === "" || v === null || v === undefined ? undefined : Number(v)),
+    z.number().int().min(1, "Must be at least 1").optional()
+  ),
 });
 
-type FormValues = z.infer<typeof schema>;
+type FormValues = Omit<z.infer<typeof schema>, "maxParticipants"> & { maxParticipants?: number };
 
 interface CampaignFormProps {
   defaultValues?: Partial<FormValues>;
@@ -72,7 +75,7 @@ export function CampaignForm({ defaultValues, campaignId, mode }: CampaignFormPr
     watch,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
-    resolver: zodResolver(schema),
+    resolver: zodResolver(schema) as unknown as Resolver<FormValues>,
     defaultValues: {
       title: "",
       description: "",
