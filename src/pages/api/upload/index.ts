@@ -2,8 +2,6 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { nanoid } from "nanoid";
-import path from "path";
-import fs from "fs";
 
 export const config = {
   api: { bodyParser: { sizeLimit: "10mb" } },
@@ -46,10 +44,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Dev: save to public/{safeFolder}/{nanoid()}.ext
     const ext = mimeType.split("/")[1] ?? "jpg";
     const fileName = `${nanoid()}.${ext}`;
-    const uploadsDir = path.join(process.cwd(), "public", ...safeFolder.split("/"));
-    if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+    const { join } = await import("path");
+    const { existsSync, mkdirSync, writeFileSync } = await import("fs");
+    const uploadsDir = join(process.cwd(), "public", ...safeFolder.split("/"));
+    if (!existsSync(uploadsDir)) mkdirSync(uploadsDir, { recursive: true });
     const buffer = Buffer.from(base64, "base64");
-    fs.writeFileSync(path.join(uploadsDir, fileName), buffer);
+    writeFileSync(join(uploadsDir, fileName), buffer);
     return res.status(200).json({ url: `/${safeFolder}/${fileName}` });
   } catch (err) {
     console.error("[upload]", err);
