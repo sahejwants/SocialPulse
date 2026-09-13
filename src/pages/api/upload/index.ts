@@ -10,7 +10,6 @@ export const config = {
 };
 
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
-const isProd = process.env.NODE_ENV === "production";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
@@ -27,14 +26,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (!base64 || !mimeType) return res.status(400).json({ error: "Missing base64 or mimeType" });
   if (!ALLOWED_TYPES.includes(mimeType)) return res.status(400).json({ error: "File type not allowed" });
 
-  // Prevent path traversal — only allow alphanumeric, hyphens, underscores, and forward slashes
+  // Prevent path traversal
   const safeFolder = folder.replace(/[^a-zA-Z0-9\-_/]/g, "").replace(/\/+/g, "/").replace(/^\/|\/$/g, "") || "uploads";
 
   try {
-    if (isProd) {
-      const { uploadToS3 } = await import("@/lib/s3");
-      const url = await uploadToS3(base64, mimeType, safeFolder);
-      return res.status(200).json({ url });
+    if (process.env.BLOB_READ_WRITE_TOKEN) {
+      // Vercel Blob (production)
+      const { put } = await import("@vercel/blob");
+      const ext = mimeType.split("/")[1] ?? "jpg";
+      const fileName = `${safeFolder}/${nanoid()}.${ext}`;
+      const buffer = Buffer.from(base64, "base64");
+      const blob = await put(fileName, buffer, {
+        access: "public",
+        contentType: mimeType,
+      });
+      return res.status(200).json({ url: blob.url });
     }
 
     // Dev: save to public/{safeFolder}/{nanoid()}.ext
@@ -42,10 +48,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const fileName = `${nanoid()}.${ext}`;
     const uploadsDir = path.join(process.cwd(), "public", ...safeFolder.split("/"));
     if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
-
     const buffer = Buffer.from(base64, "base64");
     fs.writeFileSync(path.join(uploadsDir, fileName), buffer);
-
     return res.status(200).json({ url: `/${safeFolder}/${fileName}` });
   } catch (err) {
     console.error("[upload]", err);
