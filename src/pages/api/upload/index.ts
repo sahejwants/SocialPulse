@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
+import { put } from "@vercel/blob";
 import { nanoid } from "nanoid";
 
 export const config = {
@@ -24,33 +25,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (!base64 || !mimeType) return res.status(400).json({ error: "Missing base64 or mimeType" });
   if (!ALLOWED_TYPES.includes(mimeType)) return res.status(400).json({ error: "File type not allowed" });
 
-  // Prevent path traversal
   const safeFolder = folder.replace(/[^a-zA-Z0-9\-_/]/g, "").replace(/\/+/g, "/").replace(/^\/|\/$/g, "") || "uploads";
 
   try {
-    if (process.env.BLOB_READ_WRITE_TOKEN) {
-      // Vercel Blob (production)
-      const { put } = await import("@vercel/blob");
-      const ext = mimeType.split("/")[1] ?? "jpg";
-      const fileName = `${safeFolder}/${nanoid()}.${ext}`;
-      const buffer = Buffer.from(base64, "base64");
-      const blob = await put(fileName, buffer, {
-        access: "public",
-        contentType: mimeType,
-      });
-      return res.status(200).json({ url: blob.url });
-    }
-
-    // Dev: save to public/{safeFolder}/{nanoid()}.ext
     const ext = mimeType.split("/")[1] ?? "jpg";
-    const fileName = `${nanoid()}.${ext}`;
-    const { join } = await import("path");
-    const { existsSync, mkdirSync, writeFileSync } = await import("fs");
-    const uploadsDir = join(process.cwd(), "public", ...safeFolder.split("/"));
-    if (!existsSync(uploadsDir)) mkdirSync(uploadsDir, { recursive: true });
+    const fileName = `${safeFolder}/${nanoid()}.${ext}`;
     const buffer = Buffer.from(base64, "base64");
-    writeFileSync(join(uploadsDir, fileName), buffer);
-    return res.status(200).json({ url: `/${safeFolder}/${fileName}` });
+    const blob = await put(fileName, buffer, {
+      access: "public",
+      contentType: mimeType,
+    });
+    return res.status(200).json({ url: blob.url });
   } catch (err) {
     console.error("[upload]", err);
     return res.status(500).json({ error: "Upload failed" });
