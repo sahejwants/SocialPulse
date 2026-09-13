@@ -1,0 +1,54 @@
+import type { NextApiRequest, NextApiResponse } from "next";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/auth";
+import { nanoid } from "nanoid";
+import path from "path";
+import fs from "fs";
+
+export const config = {
+  api: { bodyParser: { sizeLimit: "10mb" } },
+};
+
+const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+const isProd = process.env.NODE_ENV === "production";
+
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
+
+  const session = await getServerSession(req, res, authOptions);
+  if (!session?.user?.id) return res.status(401).json({ error: "Unauthorized" });
+
+  const { base64, mimeType, folder = "uploads" } = req.body as {
+    base64: string;
+    mimeType: string;
+    folder?: string;
+  };
+
+  if (!base64 || !mimeType) return res.status(400).json({ error: "Missing base64 or mimeType" });
+  if (!ALLOWED_TYPES.includes(mimeType)) return res.status(400).json({ error: "File type not allowed" });
+
+  // Prevent path traversal — only allow alphanumeric, hyphens, underscores, and forward slashes
+  const safeFolder = folder.replace(/[^a-zA-Z0-9\-_/]/g, "").replace(/\/+/g, "/").replace(/^\/|\/$/g, "") || "uploads";
+
+  try {
+    if (isProd) {
+      const { uploadToS3 } = await import("@/lib/s3");
+      const url = await uploadToS3(base64, mimeType, safeFolder);
+      return res.status(200).json({ url });
+    }
+
+    // Dev: save to public/{safeFolder}/{nanoid()}.ext
+    const ext = mimeType.split("/")[1] ?? "jpg";
+    const fileName = `${nanoid()}.${ext}`;
+    const uploadsDir = path.join(process.cwd(), "public", ...safeFolder.split("/"));
+    if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+
+    const buffer = Buffer.from(base64, "base64");
+    fs.writeFileSync(path.join(uploadsDir, fileName), buffer);
+
+    return res.status(200).json({ url: `/${safeFolder}/${fileName}` });
+  } catch (err) {
+    console.error("[upload]", err);
+    return res.status(500).json({ error: "Upload failed" });
+  }
+}

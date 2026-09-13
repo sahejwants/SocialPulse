@@ -1,0 +1,213 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  BUSINESS_OWNER
+  ADMIN
+}
+
+enum CampaignStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model User {
+  id                String    @id @default(cuid())
+  name              String?
+  email             String    @unique
+  emailVerified     DateTime?
+  password          String?
+  image             String?
+  role              Role      @default(USER)
+  deletedAt         DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  accounts          Account[]
+  sessions          Session[]
+  campaigns         Campaign[]
+  business          Business?
+  verificationTokens VerificationToken[]
+  campaignRegistrations CampaignRegistration[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  type      String   // "email-verification" | "password-reset"
+  expires   DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Campaign {
+  id              String         @id @default(cuid())
+  title           String
+  slug            String         @unique
+  description     String
+  category        String
+  posterImage     String
+  status          CampaignStatus @default(PENDING)
+  rejectionReason String?
+  wasEdited        Boolean        @default(false)
+  startDate        DateTime?
+  endDate          DateTime?
+  location         String?
+  mapUrl           String?
+  maxParticipants  Int?
+  userId           String
+  deletedAt       DateTime?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  user          User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  images        CampaignImage[]
+  registrations CampaignRegistration[]
+
+  @@index([status])
+  @@index([category])
+  @@index([userId])
+}
+
+model CampaignRegistration {
+  id         String    @id @default(cuid())
+  campaignId String
+  userId     String?
+  name       String
+  email      String
+  phone      String?
+  message    String?
+  deletedAt  DateTime?
+  createdAt  DateTime  @default(now())
+
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  user     User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@unique([campaignId, email])
+  @@index([campaignId])
+}
+
+model CampaignImage {
+  id         String   @id @default(cuid())
+  url        String
+  caption    String?
+  campaignId String
+  order      Int      @default(0)
+  createdAt  DateTime @default(now())
+
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+}
+
+model Business {
+  id          String    @id @default(cuid())
+  name        String
+  slug        String    @unique
+  description String
+  category    String
+  logoUrl     String?
+  website     String?
+  address     String
+  city        String
+  state       String
+  postalCode  String
+  country     String    @default("Australia")
+  userId      String    @unique
+  isVerified  Boolean   @default(false)
+  deletedAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  contacts    BusinessContact[]
+  images      BusinessImage[]
+  ads         Ad[]
+
+  @@index([category])
+  @@index([isVerified])
+}
+
+model BusinessContact {
+  id         String  @id @default(cuid())
+  type       String  // "phone" | "email" | "instagram" | "facebook" | "linkedin" | "twitter" | "other"
+  label      String?
+  value      String
+  businessId String
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+}
+
+model BusinessImage {
+  id         String   @id @default(cuid())
+  url        String
+  caption    String?
+  businessId String
+  order      Int      @default(0)
+  createdAt  DateTime @default(now())
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+}
+
+enum AdStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model Ad {
+  id              String    @id @default(cuid())
+  title           String
+  description     String?
+  imageUrl        String
+  linkUrl         String?
+  status          AdStatus  @default(PENDING)
+  rejectionReason String?
+  startsAt        DateTime?
+  endsAt          DateTime?
+  businessId      String
+  deletedAt       DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  business        Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+  @@index([businessId])
+}
