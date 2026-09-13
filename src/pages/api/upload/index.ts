@@ -37,7 +37,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
     return res.status(200).json({ url: blob.url });
   } catch (err) {
-    console.error("[upload]", err);
-    return res.status(500).json({ error: "Upload failed" });
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("[upload error]", message);
+    return res.status(500).json({ error: "Upload failed", detail: message });
   }
 }
