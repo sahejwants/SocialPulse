@@ -2,6 +2,7 @@ import { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { db } from "@/lib/db";
+import { emailEnabled } from "@/lib/flags";
 
 export const authOptions: NextAuthOptions = {
   session: {
@@ -32,7 +33,7 @@ export const authOptions: NextAuthOptions = {
           throw new Error("This account has been deactivated. Please contact support.");
         }
 
-        if (!user.emailVerified) {
+        if (emailEnabled && !user.emailVerified) {
           throw new Error("Please verify your email before signing in.");
         }
 

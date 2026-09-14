@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { CampaignStatus } from "@prisma/client";
 import { z } from "zod";
 import { sendCampaignApprovedEmail, sendCampaignRejectedEmail } from "@/lib/email";
+import { emailEnabled } from "@/lib/flags";
 
 const schema = z.object({
   status: z.enum([CampaignStatus.APPROVED, CampaignStatus.REJECTED]),
@@ -38,14 +39,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     data: { status, rejectionReason: rejectionReason ?? null },
   });
 
-  // Fire email (non-blocking — don't fail request if email fails)
-  const userEmail = campaign.user.email;
-  const userName = campaign.user.name ?? "there";
-  if (userEmail) {
-    if (status === CampaignStatus.APPROVED) {
-      sendCampaignApprovedEmail(userEmail, userName, campaign.title, campaign.slug).catch(console.error);
-    } else {
-      sendCampaignRejectedEmail(userEmail, userName, campaign.title, rejectionReason!).catch(console.error);
+  if (emailEnabled) {
+    const userEmail = campaign.user.email;
+    const userName = campaign.user.name ?? "there";
+    if (userEmail) {
+      if (status === CampaignStatus.APPROVED) {
+        sendCampaignApprovedEmail(userEmail, userName, campaign.title, campaign.slug).catch(console.error);
+      } else {
+        sendCampaignRejectedEmail(userEmail, userName, campaign.title, rejectionReason!).catch(console.error);
+      }
     }
   }
 

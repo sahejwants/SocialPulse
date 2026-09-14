@@ -13,6 +13,7 @@ import { useRouter } from "next/router";
 interface UpgradePageProps {
   userName: string;
   userEmail: string;
+  emailEnabled: boolean;
 }
 
 const BENEFITS = [
@@ -29,7 +30,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   already_upgraded: "Your account has already been upgraded to Business Owner.",
 };
 
-const UpgradePage: NextPageWithLayout<UpgradePageProps> = ({ userName, userEmail }) => {
+const UpgradePage: NextPageWithLayout<UpgradePageProps> = ({ userName, userEmail, emailEnabled }) => {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
@@ -45,6 +46,11 @@ const UpgradePage: NextPageWithLayout<UpgradePageProps> = ({ userName, userEmail
       const res = await fetch("/api/account/upgrade", { method: "POST" });
       const data = await res.json();
       if (!res.ok) { setApiError(data.error ?? "Something went wrong."); return; }
+      if (data.direct) {
+        // Email disabled — role upgraded directly, go straight to upgrade-success
+        router.push("/upgrade-success");
+        return;
+      }
       setSent(true);
     } finally {
       setLoading(false);
@@ -106,7 +112,9 @@ const UpgradePage: NextPageWithLayout<UpgradePageProps> = ({ userName, userEmail
             <div>
               <h2 className="font-['Fraunces'] text-xl font-bold text-[#18181B] mb-1">Request your upgrade</h2>
               <p className="text-sm text-[#71717A]">
-                We'll send a confirmation link to <strong className="text-[#18181B]">{userEmail}</strong>. Click it to activate your Business Owner account.
+                {emailEnabled
+                  ? <>We'll send a confirmation link to <strong className="text-[#18181B]">{userEmail}</strong>. Click it to activate your Business Owner account.</>
+                  : "Click the button below to upgrade your account instantly."}
               </p>
             </div>
 
@@ -115,12 +123,14 @@ const UpgradePage: NextPageWithLayout<UpgradePageProps> = ({ userName, userEmail
             <div className="flex items-start gap-3 bg-[#FAFAF7] border border-[#E4E4DC] rounded-xl p-4">
               <CheckCircle2 className="h-4 w-4 text-[#2D6A4F] mt-0.5 shrink-0" />
               <p className="text-xs text-[#52525B] leading-relaxed">
-                Your account will be upgraded immediately after you confirm via email. You'll then need to sign in again for the change to take effect.
+                {emailEnabled
+                  ? "Your account will be upgraded immediately after you confirm via email. You'll then need to sign in again for the change to take effect."
+                  : "Your account will be upgraded instantly. You'll need to sign in again for the change to take effect."}
               </p>
             </div>
 
             <Button onClick={requestUpgrade} loading={loading} className="w-full" size="lg">
-              Send upgrade confirmation email
+              {emailEnabled ? "Send upgrade confirmation email" : "Upgrade to Business Owner"}
             </Button>
           </div>
         )}
@@ -145,6 +155,7 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
     props: {
       userName: session.user.name ?? "",
       userEmail: session.user.email ?? "",
+      emailEnabled: process.env.EMAIL_VERIFICATION !== "false",
     },
   };
 };

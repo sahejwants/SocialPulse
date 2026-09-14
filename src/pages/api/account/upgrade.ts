@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { Role } from "@prisma/client";
 import crypto from "crypto";
 import { sendRoleUpgradeEmail } from "@/lib/email";
+import { emailEnabled } from "@/lib/flags";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
@@ -22,13 +23,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   });
   if (!user) return res.status(404).json({ error: "User not found" });
 
+  // When email is disabled, upgrade directly without token/email
+  if (!emailEnabled) {
+    await db.user.update({
+      where: { id: user.id },
+      data: { role: Role.BUSINESS_OWNER },
+    });
+    return res.status(200).json({ ok: true, direct: true });
+  }
+
   // Remove any existing upgrade tokens for this user
   await db.verificationToken.deleteMany({
     where: { userId: user.id, type: "role-upgrade" },
   });
 
   const token = crypto.randomBytes(32).toString("hex");
-  const expires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+  const expires = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
   await db.verificationToken.create({
     data: { token, userId: user.id, type: "role-upgrade", expires },
@@ -36,5 +46,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   await sendRoleUpgradeEmail(user.email, user.name ?? "", token);
 
-  return res.status(200).json({ ok: true });
+  return res.status(200).json({ ok: true, direct: false });
 }

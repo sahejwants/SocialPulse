@@ -4,6 +4,7 @@ import bcrypt from "bcryptjs";
 import { randomBytes } from "crypto";
 import { db } from "@/lib/db";
 import { sendVerificationEmail } from "@/lib/email";
+import { emailEnabled } from "@/lib/flags";
 import slugify from "slugify";
 
 const schema = z.object({
@@ -44,11 +45,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         email: email.toLowerCase(),
         password: hashed,
         role,
+        // Auto-verify when email verification is disabled
+        emailVerified: emailEnabled ? null : new Date(),
       },
     });
 
+    if (!emailEnabled) {
+      return res.status(201).json({
+        success: true,
+        message: "Account created. You can now sign in.",
+      });
+    }
+
     const token = randomBytes(32).toString("hex");
-    const expires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+    const expires = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
     await db.verificationToken.create({
       data: {
@@ -58,8 +68,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         expires,
       },
     });
-
-    console.log(`Verification token for ${user.email}: ${token}`); // For debugging purposes
 
     await sendVerificationEmail(user.email, user.name ?? "", token);
 

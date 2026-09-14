@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { CampaignStatus } from "@prisma/client";
 import { z } from "zod";
 import { sendCampaignJoinConfirmationEmail, sendCampaignJoinNotificationEmail } from "@/lib/email";
+import { emailEnabled } from "@/lib/flags";
 
 const schema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters").max(100),
@@ -68,12 +69,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     },
   });
 
-  // Non-blocking emails
-  sendCampaignJoinConfirmationEmail(email, name, campaign).catch(console.error);
-  if (campaign.user.email !== email) {
-    sendCampaignJoinNotificationEmail(
-      campaign.user.email, campaign.user.name ?? "", campaign.title, campaign.slug, name, email
-    ).catch(console.error);
+  if (emailEnabled) {
+    sendCampaignJoinConfirmationEmail(email, name, campaign).catch(console.error);
+    if (campaign.user.email !== email) {
+      sendCampaignJoinNotificationEmail(
+        campaign.user.email, campaign.user.name ?? "", campaign.title, campaign.slug, name, email
+      ).catch(console.error);
+    }
   }
 
   return res.status(201).json(registration);

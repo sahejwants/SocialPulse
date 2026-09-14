@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { AdStatus } from "@prisma/client";
 import { z } from "zod";
 import { sendAdRejectedEmail, sendAdApprovedEmail } from "@/lib/email";
+import { emailEnabled } from "@/lib/flags";
 
 const schema = z.object({
   status: z.enum([AdStatus.APPROVED, AdStatus.REJECTED]),
@@ -37,12 +38,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     data: { status, rejectionReason: rejectionReason ?? null },
   });
 
-  const ownerEmail = ad.business.user.email;
-  const ownerName = ad.business.user.name ?? "";
-  if (status === AdStatus.APPROVED) {
-    sendAdApprovedEmail(ownerEmail, ownerName, ad.title, ad.business.slug).catch(console.error);
-  } else if (status === AdStatus.REJECTED && rejectionReason) {
-    sendAdRejectedEmail(ownerEmail, ownerName, ad.title, rejectionReason).catch(console.error);
+  if (emailEnabled) {
+    const ownerEmail = ad.business.user.email;
+    const ownerName = ad.business.user.name ?? "";
+    if (status === AdStatus.APPROVED) {
+      sendAdApprovedEmail(ownerEmail, ownerName, ad.title, ad.business.slug).catch(console.error);
+    } else if (status === AdStatus.REJECTED && rejectionReason) {
+      sendAdRejectedEmail(ownerEmail, ownerName, ad.title, rejectionReason).catch(console.error);
+    }
   }
 
   return res.status(200).json(updated);

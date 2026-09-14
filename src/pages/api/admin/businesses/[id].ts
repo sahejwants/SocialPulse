@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
 import { sendBusinessApprovedEmail } from "@/lib/email";
+import { emailEnabled } from "@/lib/flags";
 
 const schema = z.object({ isVerified: z.boolean() });
 
@@ -29,7 +30,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     data: { isVerified: parsed.data.isVerified },
   });
 
-  if (parsed.data.isVerified && wasUnverified) {
+  if (emailEnabled && parsed.data.isVerified && wasUnverified) {
     sendBusinessApprovedEmail(business.user.email, business.user.name ?? "", business.name, business.slug).catch(console.error);
   }
 
