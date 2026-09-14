@@ -16,8 +16,8 @@ const createSchema = z.object({
     .array(z.object({ url: z.string().min(1), caption: z.string().optional() }))
     .max(8)
     .optional(),
-  startDate: z.string().datetime({ offset: true }).optional().or(z.literal("")).transform((v) => v || null),
-  endDate: z.string().datetime({ offset: true }).optional().or(z.literal("")).transform((v) => v || null),
+  startDate: z.string().optional().or(z.literal("")).transform((v) => v || null),
+  endDate: z.string().optional().or(z.literal("")).transform((v) => v || null),
   location: z.string().max(300).optional().or(z.literal("")).transform((v) => v || null),
   mapUrl: z.string().url().optional().or(z.literal("")).transform((v) => v || null),
   maxParticipants: z.coerce.number().int().min(1).optional().nullable(),
