@@ -53,6 +53,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (!emailEnabled) {
       return res.status(201).json({
         success: true,
+        verified: true,
         message: "Account created. You can now sign in.",
       });
     }

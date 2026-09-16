@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
@@ -35,6 +35,8 @@ export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [autoVerified, setAutoVerified] = useState(false);
+  const [countdown, setCountdown] = useState(3);
   const [loading, setLoading] = useState(false);
 
   const { register, handleSubmit, formState: { errors }, watch } = useForm<FormData>({
@@ -43,6 +45,14 @@ export default function RegisterPage() {
   });
 
   const role = watch("role");
+
+  // Auto-redirect countdown when email verification is disabled
+  useEffect(() => {
+    if (!autoVerified) return;
+    if (countdown <= 0) { router.push("/auth/login"); return; }
+    const t = setTimeout(() => setCountdown((c) => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [autoVerified, countdown, router]);
 
   const onSubmit = async (data: FormData) => {
     setError(null);
@@ -58,11 +68,36 @@ export default function RegisterPage() {
         setError(json.error ?? "Something went wrong.");
       } else {
         setSuccess(true);
+        if (json.verified) setAutoVerified(true);
       }
     } finally {
       setLoading(false);
     }
   };
+
+  if (success && autoVerified) {
+    return (
+      <AuthLayout title="Account created" description="Welcome to SocialPulse">
+        <div className="text-center space-y-6">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-emerald-100">
+            <svg className="w-8 h-8 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <div>
+            <h2 className="font-['Fraunces'] text-2xl font-bold text-[#18181B]">Account created!</h2>
+            <p className="mt-3 text-sm text-[#71717A] leading-relaxed">
+              Your account is ready. Redirecting to sign in in{" "}
+              <strong className="text-[#18181B]">{countdown}</strong> second{countdown !== 1 ? "s" : ""}…
+            </p>
+          </div>
+          <Button size="md" onClick={() => router.push("/auth/login")} className="w-full">
+            Sign in now
+          </Button>
+        </div>
+      </AuthLayout>
+    );
+  }
 
   if (success) {
     return (
