@@ -64,7 +64,7 @@ const AdminUsersPage: NextPageWithLayout<AdminUsersProps> = ({ activeUsers, arch
     router.replace(router.asPath);
   };
 
-  const changeRole = (id: string, role: Role) => patch(id, { action: "role", role });
+  // const changeRole = (id: string, role: Role) => patch(id, { action: "role", role });
   const archive = (id: string) => { if (confirm("Archive this user? They will not be able to sign in.")) patch(id, { action: "archive" }); };
   const restore = (id: string) => patch(id, { action: "restore" });
 
@@ -120,27 +120,28 @@ const AdminUsersPage: NextPageWithLayout<AdminUsersProps> = ({ activeUsers, arch
                 {/* Joined */}
                 <p className="text-xs text-[#A1A1AA] whitespace-nowrap">{formatDate(u.createdAt)}</p>
 
-                {/* Role selector */}
+                {/* Role badge (read-only — role changing disabled for now) */}
                 <div>
-                  {u.id === currentUserId ? (
-                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-violet-50 text-violet-700 text-xs font-semibold">
-                      <ShieldCheck className="h-3.5 w-3.5" /> {ROLE_LABELS[u.role]}
-                    </div>
-                  ) : (
-                    <select
-                      value={u.role}
-                      disabled={processing === u.id}
-                      onChange={(e) => changeRole(u.id, e.target.value as Role)}
-                      className={cn(
-                        "text-xs font-semibold px-3 py-1.5 rounded-lg border-0 cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#E8572A] disabled:opacity-50",
-                        ROLE_STYLE[u.role]
-                      )}
-                    >
-                      {Object.values(Role).map((r) => (
-                        <option key={r} value={r}>{ROLE_LABELS[r]}</option>
-                      ))}
-                    </select>
-                  )}
+                  <div className={cn(
+                    "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold",
+                    u.id === currentUserId ? "bg-violet-50 text-violet-700" : ROLE_STYLE[u.role]
+                  )}>
+                    {u.id === currentUserId && <ShieldCheck className="h-3.5 w-3.5" />}
+                    {ROLE_LABELS[u.role]}
+                  </div>
+                  {/* <select
+                    value={u.role}
+                    disabled={processing === u.id}
+                    onChange={(e) => changeRole(u.id, e.target.value as Role)}
+                    className={cn(
+                      "text-xs font-semibold px-3 py-1.5 rounded-lg border-0 cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#E8572A] disabled:opacity-50",
+                      ROLE_STYLE[u.role]
+                    )}
+                  >
+                    {Object.values(Role).map((r) => (
+                      <option key={r} value={r}>{ROLE_LABELS[r]}</option>
+                    ))}
+                  </select> */}
                 </div>
 
                 {/* Archive */}

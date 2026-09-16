@@ -100,7 +100,7 @@ const AdminDashboard: NextPageWithLayout<AdminDashboardProps> = ({ stats, recent
       </div>
 
       {/* Recent campaigns */}
-      <div className="bg-white rounded-2xl border border-[#E4E4DC] overflow-hidden">
+      {/* <div className="bg-white rounded-2xl border border-[#E4E4DC] overflow-hidden">
         <div className="flex items-center justify-between px-6 py-4 border-b border-[#F4F4F0]">
           <h2 className="font-['Fraunces'] text-base font-bold text-[#18181B]">Recent campaigns</h2>
           <Link href="/admin/campaigns" className="text-xs font-semibold text-[#E8572A] hover:underline">
@@ -130,8 +130,9 @@ const AdminDashboard: NextPageWithLayout<AdminDashboardProps> = ({ stats, recent
             </div>
           ))}
         </div>
+        </div>
+        */ }
       </div>
-    </div>
   );
 };
 
