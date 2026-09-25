@@ -88,6 +88,26 @@ const DashboardPage: NextPageWithLayout<DashboardProps> = ({ user, ownCampaigns,
         </Link>
       )}
 
+      {/* Create-listing prompt — shown to BUSINESS_OWNER accounts with no listing yet.
+          Without this, a newly registered business owner has no way to discover that
+          they still need to submit a listing before it can appear in the admin
+          verification queue. */}
+      {isBusinessOwner && !business && (
+        <Link
+          href="/business/create"
+          className="flex items-center gap-4 bg-[#FFF5F2] border border-[#E8572A]/20 rounded-2xl px-5 py-4 hover:border-[#E8572A]/50 transition-colors group"
+        >
+          <div className="w-10 h-10 rounded-xl bg-[#E8572A]/10 flex items-center justify-center shrink-0">
+            <Building2 className="h-5 w-5 text-[#E8572A]" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-[#E8572A]">List your business</p>
+            <p className="text-xs text-[#52525B] mt-0.5">Submit your business details so our team can review and verify your listing.</p>
+          </div>
+          <ChevronRight className="h-4 w-4 text-[#E8572A] shrink-0 group-hover:translate-x-0.5 transition-transform" />
+        </Link>
+      )}
+
       {/* Quick stats */}
       <div className={cn("grid gap-4", isBusinessOwner ? "grid-cols-3" : "grid-cols-2")}>
         <StatCard
