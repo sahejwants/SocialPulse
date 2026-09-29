@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
 import slugify from "slugify";
+import { CampaignStatus } from "@prisma/client";
 import { CAMPAIGN_CATEGORIES } from "@/types";
 
 const updateSchema = z.object({
@@ -34,6 +35,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       },
     });
     if (!campaign) return res.status(404).json({ error: "Campaign not found" });
+
+    // Non-approved campaigns are private — only the owner and admins may view them.
+    // Mirrors the same rule enforced in getServerSideProps for the public campaign page.
+    const session = await getServerSession(req, res, authOptions);
+    const isOwner = session?.user?.id === campaign.userId;
+    const isAdmin = session?.user?.role === "ADMIN";
+    if (campaign.status !== CampaignStatus.APPROVED && !isOwner && !isAdmin) {
+      return res.status(404).json({ error: "Campaign not found" });
+    }
+
     return res.status(200).json(campaign);
   }
 
